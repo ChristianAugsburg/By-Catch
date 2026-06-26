@@ -18,7 +18,7 @@ Für Fragen, Fehlerberichte (Issues) oder Funktionserweiterungen wende dich bitt
 
 ## 💻 Systemarchitektur & Funktionsweise
 
-Das System benötigt **zwei getrennte Moodle-Datenbanken** im selben Kursbereich, um die Last zu verteilen und die Fragen-Templates (Dozenten-Archiv) sauber von der volatilen Spiel-Schnittstelle (Schüler-Antworten) zu trennen:
+Das System benötigt **zwei getrennte Moodle-Datenbanken** im selben Kursbereich, um die Last zu verteilen und die Fragen-Templates (Dozenten-Archiv) sauber von der volatilen Spiel-Schnittstelle (Schüler-Antworten) zu trennen: -> Vorlagen Importieren oder selbst zusammenstellen.
 
 ### 1. Die Programmdatenbank (Live-Schnittstelle)
 Diese Datenbank fungiert als hochfrequenter Datenspeicher (Data-Bus) für das laufende Spiel. Über asynchrone `fetch()`-Abfragen im Hintergrund kommunizieren die Smartphones der Schüler, das Dashboard des Spielleiters und das geöffnete Beamer-Fenster in Echtzeit miteinander.
