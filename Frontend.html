@@ -1,134 +1,658 @@
- Vorlage für Einträge hinzufügen 
- <div class="container-fluid bycatch-add-wrapper p-4" style="background-color: #f8f9fa !important; border-radius: 12px; color: #333; border: 1px solid #dee2e6;">
-    <h2 class="text-center mb-4" style="color: #005a9c; font-weight: 800; letter-spacing: 1px;">🥨 NEUES BY-CATCH QUIZ SCHMIEDEN</h2>
+<!-- 🛑 HIER STEHT DEINE DATENBANK-ID im data-quiz-id Attribut 🛑 -->
+<div class="gscheidhaferl-app-wrapper" data-quiz-id="HIER DIE ID EINTRAGEN">
+    <h2 class="gh-title text-center mt-2 mb-3" style="color:#005a9c; cursor:pointer; user-select:none; touch-action:manipulation;" title="3x klicken für Lehrer-Ansicht">🥨 BY-Catch Quiz</h2>
 
-    <div class="card mb-4" style="background-color: #fff !important; border: 1px solid #005a9c !important;">
-        <div class="card-body">
-            <h5 class="card-title" style="color: #005a9c;"><span class="badge me-2" style="background-color: #005a9c; color: #fff;">1</span> Thema festlegen</h5>
-            <div class="moodle-field-wrapper mt-3">
-                [[Thema]]
+    <div id="s-warte-screen" class="gh-card text-center py-4" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div id="s-current-identity" class="small text-muted d-flex align-items-center">
+                <div id="s-stat-img" style="width:30px; height:30px; border-radius:50%; background:#eee; margin-right:8px; background-size:cover; background-position:center;"></div>
+                <span id="s-stat-name">Lade Profil...</span>
             </div>
-            <small class="text-muted">z.B. "Geographie - Europa" oder "Mathe - Bruchrechnen"</small>
+            <button type="button" id="btn-edit-profile" class="btn btn-sm btn-outline-secondary">⚙️ Ändern</button>
         </div>
-    </div>
-
-    <div class="card mb-4" style="background-color: #e7f3ff !important; border: 1px solid #0dcaf0 !important; border-left: 5px solid #0dcaf0 !important;">
-        <div class="card-body">
-            <h5 style="color: #055160 !important; font-weight: bold;">🤖 KI-REZEPT (ZUM KOPIEREN)</h5>
-            <p id="promptText" style="font-family: sans-serif; color: #055160; font-size: 0.95rem; background: rgba(255,255,255,0.5); padding: 15px; border-radius: 8px; border: 1px dashed #0dcaf0;">
-                Erstelle 5 Multiple-Choice-Fragen zum Thema <strong>[THEMA]</strong>. Regeln: 1. Keine Kopfzeile, kein Markdown. 2. Trenne Spalten mit "|". 3. Spalten: RundenID (z.B. Q1) | Frage | Antwort A | Antwort B | Antwort C | Antwort D | Lösung (z.B. A,C) | Zeit (immer 20). 4. Bei Wahr/Falsch setze bei C und D ein "-".
-            </p>
-            <button type="button" class="btn w-100 fw-bold shadow-sm" style="background-color: #0dcaf0; color: #fff;" onclick="copyByCatchPrompt('promptText')">PROMPT KOPIEREN 📋</button>
-        </div>
-    </div>
-
-    <div class="card mb-4" style="background-color: #fff !important; border: 1px solid #26890c !important;">
-        <div class="card-body">
-            <h5 class="card-title" style="color: #26890c;"><span class="badge me-2" style="background-color: #26890c; color: #fff;">2</span> KI-Output einfügen</h5>
-            <div class="moodle-field-wrapper mt-3">
-                [[Fragen_Input]]
+        
+        <div id="s-profile-edit" style="display:none; background:#f8f9fa; padding:15px; border-radius:10px; margin-bottom:20px; border:1px solid #ddd;">
+            <input type="text" id="s-input-name" class="form-control mb-2 text-center fw-bold" placeholder="Dein Name">
+            <div id="s-emoji-picker" class="d-flex justify-content-center gap-2 flex-wrap mb-2" style="font-size:1.5rem; cursor:pointer; user-select:none;">
+                <span>🐶</span><span>🐱</span><span>🐼</span><span>🦊</span><span>🦁</span><span>🐸</span><span>👽</span><span>🤠</span><span>🐘</span><span>🥨</span>
             </div>
-            <small class="text-muted">Füge hier den generierten Text (ID | Frage | A | B | C | D | Lösung | Zeit) ein.</small>
+            <button type="button" id="btn-save-profile" class="btn btn-sm btn-primary w-100 shadow-sm">Speichern & Schließen</button>
         </div>
+
+        <h3 id="s-warte-text" class="text-primary mb-4">Warte auf Freigabe...</h3>
+        <button type="button" id="btn-pull-frage" class="btn btn-success btn-lg fw-bold shadow-lg" style="border-radius:15px; padding:20px; font-size:1.3rem; display:none;">
+            🚀 Zeig schon her!
+        </button>
+        <div id="s-eval-area" class="mt-4"></div>
     </div>
 
-    <div class="d-flex justify-content-center gap-3 mt-4">
-        ##save## ##cancel##
+    <div id="s-spiel-screen" class="gh-card" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-2 border-bottom pb-2">
+            <span class="text-muted fw-bold">⏳ Zeit: <span id="s-countdown" class="text-danger fs-4">20</span>s</span>
+        </div>
+        <h4 id="s-frage-text" class="text-center mt-3 mb-4 fw-bold"></h4>
+        <div class="antwort-grid" id="s-antwort-grid"></div>
+        <button type="button" id="btn-student-submit" class="btn w-100 fw-bold shadow-sm mt-4" style="background:#26890c; color:white; font-size:1.3rem; padding:15px;" disabled>
+            ✅ Antwort einloggen
+        </button>
+    </div>
+
+    <div id="l-dashboard" class="gh-card border border-primary" style="display:none;">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+            <h4 class="text-primary m-0">⚙️ Gamemaster</h4>
+            <button type="button" id="btn-open-beamer" class="btn btn-dark fw-bold shadow-sm">📽️ Beamer öffnen</button>
+        </div>
+
+        <button type="button" id="btn-toggle-ai" class="btn btn-outline-info btn-sm fw-bold w-100 mb-2 shadow-sm" style="color:#055160; border: 2px solid #0dcaf0;">🤖 KI-Prompt zum Fragen-Erstellen anzeigen</button>
+        <div id="info-ai" class="alert alert-info small mb-3" style="display:none; border-left:4px solid #0dcaf0;">
+            <strong>Kopiere diesen Text für ChatGPT oder Gemini:</strong><br>
+            <code style="display:block; margin-top:8px; padding:10px; background:#fff; border-radius:4px; user-select:all; cursor:pointer; color:#000; border: 1px dashed #0dcaf0;">Erstelle 5 Multiple-Choice-Fragen zum Thema [THEMA]. Regeln: 1. Keine Kopfzeile, kein Markdown. 2. Trenne Spalten mit "|". 3. Spalten: RundenID (z.B. Q1) | Frage | Antwort A | Antwort B | Antwort C | Antwort D | Lösung (z.B. A,C) | Zeit (immer 20). 4. Bei Wahr/Falsch setze bei C und D ein "-". 5. Achte zwingend auf eine gleichmäßige und abwechslungsreiche Verteilung der richtigen Lösungen (A, B, C und D sollen als richtige Antwort random rotieren).</code>
+        </div>
+
+        <textarea id="l-mass-import" class="form-control mb-2 border-primary" rows="2" placeholder="Fragen-Import (ID | Frage | A | B | C | D | Lösung | Zeit)"></textarea>
+        <div class="d-flex gap-2 mb-4">
+            <button type="button" id="btn-mass-speichern" class="btn btn-primary fw-bold flex-grow-1 shadow-sm">🚀 Einlesen</button>
+            <button type="button" id="btn-db-leeren" class="btn btn-outline-danger fw-bold shadow-sm">🧨 DB leeren</button>
+        </div>
+
+        <h5 class="text-success border-bottom pb-2 mb-3">▶️ Steuerung</h5>
+        
+        <div id="l-aktive-runde-info" class="alert alert-warning" style="display:none; border:2px solid #ffc107;">
+            <div class="d-flex justify-content-between align-items-center mb-2 border-bottom border-warning pb-2">
+                <strong>Aktiv: <span id="l-aktiv-rundenid" class="text-danger fs-5"></span></strong>
+                <span class="bg-white px-2 py-1 rounded shadow-sm border">
+                    Antworten: <strong id="l-antwort-counter" class="text-danger fs-5">0</strong>
+                </span>
+            </div>
+            <h5 id="l-aktiv-frage" class="fw-bold mb-3 text-dark"></h5>
+            <div id="l-aktiv-opts" class="small mb-3 text-dark" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;"></div>
+            <button type="button" id="btn-lehrer-stop" class="btn btn-danger btn-lg w-100 fw-bold shadow-sm mt-3">⏳ Runde beenden & Auswerten</button>
+        </div>
+
+        <div id="l-fragenliste" class="list-group"></div>
+        <button type="button" id="btn-finale-starten" class="btn btn-warning w-100 shadow-lg mt-4 fw-bold" style="font-size:1.2rem; padding:15px; color:#000;">🏆 Siegerehrung starten</button>
     </div>
 </div>
 
 <script>
-function copyByCatchPrompt(elementId) {
-    const text = document.getElementById(elementId).innerText;
-    navigator.clipboard.writeText(text);
-    alert("BY-Catch Prompt kopiert!");
-}
-</script>
+(function() {
+    const initGame = (appWrapper) => {
+        const QUIZ_DB_ID = appWrapper.getAttribute('data-quiz-id');
+        const $el = (id) => appWrapper.querySelector('#' + id);
+        const $els = (sel) => appWrapper.querySelectorAll(sel);
 
-
-Einzelansicht:
-<div class="container py-4" style="max-width: 800px;">
-    <div class="mb-3">##list##</div>
+        // CSS sicher über JS injizieren, um Moodle-Editor-Filter bei Lehrer-Accounts zu umgehen
+        if (!document.getElementById('gh-dynamic-style')) {
+            const style = document.createElement('style');
+            style.id = 'gh-dynamic-style';
+            style.innerHTML = `
+            :root { --gh-prim: #005a9c; --gh-bg: #f8f9fa; }
+            .gscheidhaferl-app-wrapper { font-family: sans-serif; background: var(--gh-bg); border-radius: 12px; padding: 15px; max-width: 800px; margin: 0 auto; }
+            .gh-card { background: #fff; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,.05); }
+            .antwort-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+            .btn-antwort { padding: 15px 10px; font-size: 1.1rem; font-weight: 700; border-radius: 10px; border: none; color: #fff; cursor: pointer; transition: all .1s; }
+            .btn-antwort:disabled { opacity: .5; cursor: not-allowed; }
+            .btn-antwort.selected { transform: scale(0.96); border: 3px solid #fff; box-shadow: 0 0 10px rgba(0,0,0,0.4); }
+            .btn-a { background-color: #e21b3c; } .btn-b { background-color: #1368ce; }
+            .btn-c { background-color: #d89e00; } .btn-d { background-color: #26890c; }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        const noCacheOptions = { cache: 'no-store', headers: { 'Cache-Control': 'no-cache' } };
+    let isTeacher = document.body.classList.contains('editing') || document.querySelector('a[href*="edit.php"]') !== null;
     
-    <div class="card shadow-lg" style="border-radius: 15px; border: none; border-top: 8px solid #005a9c;">
-        <div class="card-header bg-white p-4">
-            <small class="text-uppercase text-muted fw-bold">Quiz Vorlage</small>
-            <h2 style="color: #005a9c; font-weight: 800;">[[Thema]]</h2>
-        </div>
-        <div class="card-body p-4">
-            <h5 class="fw-bold">Fragen-Daten:</h5>
-            <div id="fullContent" style="background: #212529; color: #00ff00; padding: 20px; border-radius: 10px; font-family: monospace; white-space: pre-wrap;">[[Fragen_Input]]</div>
-            
-            <button class="btn btn-lg w-100 mt-4 fw-bold" style="background: #26890c; color: white;" onclick="navigator.clipboard.writeText(document.getElementById('fullContent').innerText); alert('Kopiert!')">
-                ALLES KOPIEREN 📋
-            </button>
-        </div>
-        <div class="card-footer bg-light d-flex justify-content-end">
-            ##edit## ##delete##
-        </div>
-    </div>
-</div>
+    let currentUser = { name: "Gast-" + Math.floor(Math.random()*1000), img: "emo:👤" };
+    let aktuellerStatusObj = null;
+    let localQuizStartTimer = 0;
+    let teacherPollInterval = null;
+    let globalDB_D_ID = null;
 
+    async function getMoodleDatabaseD() {
+        if (globalDB_D_ID) return globalDB_D_ID;
+        try {
+            let viewRes = await fetch(window.location.origin + '/mod/data/view.php?id=' + QUIZ_DB_ID + '&mode=list&_t=' + Date.now(), noCacheOptions);
+            const dMatch = (await viewRes.text()).match(/[?&]d=(\d+)/);
+            if (dMatch) { globalDB_D_ID = dMatch[1]; return globalDB_D_ID; }
+        } catch(e) {}
+        return null;
+    }
 
-Listenansicht
-Kopfzeile:
-<div class="container-fluid bycatch-list-wrapper p-4" style="background-color: #f0f2f5; min-height: 100vh;">
-    <h1 class="text-center mb-4" style="color: #005a9c; font-weight: 900; text-transform: uppercase;">🥨 BY-CATCH ARCHIV</h1>
+    // --- REPARIERTE DATENBANK EXTRAKTION ---
+    async function fetchDB() {
+        if (!QUIZ_DB_ID) return [];
+        try {
+            // &mode=list&perpage=1000 zwingt Moodle dazu, alle Einträge auf einer Seite zu zeigen (umgeht die 10er Pagination)
+            let res = await fetch(window.location.origin + '/mod/data/view.php?id=' + QUIZ_DB_ID + '&mode=list&perpage=1000&_t=' + Date.now(), noCacheOptions);
+            const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
+            const data = [];
+            doc.querySelectorAll('.db-reihe').forEach(row => {
+                const getVal = cls => { const el = row.querySelector(cls); return el ? el.textContent.trim() : null; };
+                let rid = null;
+                const editL = row.querySelector('a[href*="edit.php"]');
+                if (editL) rid = editL.href.match(/rid=(\d+)/)[1];
+                
+                // Moodle Profilbild & Echten Namen auslesen
+                let bild = "-";
+                let extraName = null;
+                let imgEl = row.querySelector('.db-userpicture img');
+                if(imgEl && imgEl.src) {
+                    bild = imgEl.src;
+                    // Lese den echten Namen aus alt-Attribut
+                    extraName = imgEl.alt || imgEl.title;
+                }
+                
+                // Avatar Fallback (Emoji auslesen falls kein Moodle Bild)
+                let rawBild = getVal('.db-bildurl');
+                if(rawBild && rawBild !== "-" && (rawBild.startsWith("emo:") || rawBild.startsWith("http"))) bild = rawBild;
+                if(!bild || bild === "-") bild = "emo:👤";
 
-    <div class="row mb-4 justify-content-center">
-        <div class="col-md-8">
-            <input type="text" id="bycatchSearch" class="form-control shadow-sm" style="border-radius: 25px; border: 2px solid #005a9c; padding: 12px 20px;" placeholder="🔍 Quiz-Thema suchen..." onkeyup="filterByCatchCards()">
-        </div>
-    </div>
+                // Namen auflösen (Spielername oder Echter Moodle Name)
+                let sName = getVal('.db-spielername');
+                if((!sName || sName === "-") && extraName) sName = extraName;
 
-    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4" id="bycatchGrid">
+                data.push({ 
+                    rid, typ: getVal('.db-typ'), rundenId: getVal('.db-rundenid'), text: getVal('.db-text'), 
+                    optA: getVal('.db-opta'), optB: getVal('.db-optb'), optC: getVal('.db-optc'), optD: getVal('.db-optd'), 
+                    wert: getVal('.db-wert'), zeit: getVal('.db-zeitstempel'), status: getVal('.db-status'), 
+                    name: sName, bild: bild 
+                });
+            });
+            return data.filter(d => d.typ && d.rundenId);
+        } catch (e) { return []; }
+    }
 
-         Wiederholter Eintrag 
+    async function saveToMoodle(dataObj) {
+        try {
+            let dId = await getMoodleDatabaseD();
+            if (!dId) return false;
+            let editUrl = window.location.origin + '/mod/data/edit.php?d=' + dId + (dataObj.rid ? '&rid=' + dataObj.rid : '');
+            const editRes = await fetch(editUrl + '&_t=' + Date.now(), noCacheOptions);
+            const doc = new DOMParser().parseFromString(await editRes.text(), 'text/html');
+            const hiddenD = doc.querySelector('input[type="hidden"][name="d"]');
+            if (!hiddenD) return false;
+            const form = hiddenD.closest('form');
+            const fd = new FormData(form);
+            const labels = form.querySelectorAll('label');
+            const fields = { typ:'Typ', rundenId:'RundenID', text:'Text', optA:'OptA', optB:'OptB', optC:'OptC', optD:'OptD', wert:'Wert', zeit:'Zeitstempel', status:'Status', name:'SpielerName', bild:'BildURL' };
+            for (let key in fields) {
+                let cleanSearch = fields[key].toLowerCase().replace(/[^a-z0-9]/g, '');
+                labels.forEach(l => {
+                    let cleanLabel = l.textContent.toLowerCase().replace(/[^a-z0-9]/g, '');
+                    if (cleanLabel === cleanSearch) {
+                        let input = doc.getElementById(l.getAttribute('for'));
+                        if (input && dataObj[key] !== undefined) {
+                            fd.delete(input.name); fd.append(input.name, dataObj[key]);
+                        } else if (input && !dataObj.rid && (!fd.has(input.name) || fd.get(input.name) === "")) {
+                            fd.delete(input.name); fd.append(input.name, "-");
+                        }
+                    }
+                });
+            }
+            if (fd.has('saveandview')) fd.delete('saveandview');
+            fd.append('saveandview', 'Speichern');
+            await fetch(editUrl, { method: 'POST', body: fd, cache: 'no-store' });
+            return true;
+        } catch (e) { return false; }
+    }
 
-         <div class="col bycatch-card-item" data-search="[[Thema]]">
-    <div class="card h-100 shadow-sm" style="border: none; border-top: 5px solid #005a9c; border-radius: 10px; overflow: hidden; background: white;">
-        <div class="card-body d-flex flex-column">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <h4 style="color: #005a9c; font-weight: bold; margin: 0; font-size: 1.2rem;">[[Thema]]</h4>
-                <div class="moodle-mini-tools text-muted">
-                    ##edit## ##delete##
+    // --- LEHRER MODUS ---
+    if (isTeacher) {
+        // Dashboard sofort anzeigen, wenn im Lehrer-Modus
+        $el('l-dashboard').style.display = 'block';
+        updateLehrerList();
+        $el('btn-toggle-ai').onclick = function() {
+            let el = $el('info-ai'); el.style.display = (el.style.display === 'none') ? 'block' : 'none';
+        };
+
+        // BEAMER WINDOW INIT
+        $el('btn-open-beamer').onclick = () => {
+            let bWin = window.open('about:blank', '_blank', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
+            if(!bWin) { alert("⚠️ Bitte Popups für Moodle erlauben!"); return; }
+            bWin.focus(); // Zwingt das Fenster garantiert in den Vordergrund
+            let html = `<!DOCTYPE html>
+            <html>
+            <head>
+                <title>Beamer</title>
+                <style>
+                    body{margin:0;font-family:sans-serif;background:radial-gradient(circle at center,#1a2a6c,#112b3c,#000);color:white;height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;overflow:hidden;}
+                    h1{font-size:5rem;font-weight:900;}
+                    .spotlight{position:absolute;top:-50px;width:120px;height:120vh;background:linear-gradient(to bottom,rgba(255,255,255,0.2),transparent);transform-origin:top center;z-index:0;pointer-events:none;}
+                    .spot-left{left:20%;animation:sweepLeft 4s infinite alternate ease-in-out;}
+                    .spot-right{right:20%;animation:sweepRight 3s infinite alternate ease-in-out;}
+                    @keyframes sweepLeft{0%{transform:rotate(-30deg);}100%{transform:rotate(30deg);}}
+                    @keyframes sweepRight{0%{transform:rotate(30deg);}100%{transform:rotate(-30deg);}}
+                    @keyframes pulse{from{transform:scale(1);}to{transform:scale(1.05);}}
+                    .confetti{position:absolute;top:-20px;width:10px;height:20px;z-index:10;animation:fall 3.5s linear infinite;}
+                    @keyframes fall{to{transform:translateY(110vh) rotate(720deg);}}
+                    /* NEW SCROLL LIST STYLES */
+                    .beamer-rank-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); color: #fff; font-size: 1.1rem; font-weight: bold; width: 100%; box-sizing: border-box; }
+                    .beamer-rank-item-name { display: flex; align-items: center; gap: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                    .beamer-rank-item-avatar { width: 35px; height: 35px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid #ffd700; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #000; background-color: #fff; flex-shrink: 0; }
+                    .beamer-rank-item-score { color: #00ff88; flex-shrink: 0; }
+                </style>
+            </head>
+            <body>
+                <div id="beamer-lobby" style="z-index:2;"><h1>🥨 BY-Catch Quiz</h1><h2>Am Handy auf "Zeig schon her" klicken!</h2></div>
+                <div id="beamer-aktiv" style="display:none;z-index:2;"><h1 style="color:#ff007f;animation:pulse 0.5s infinite alternate;text-shadow:0 0 20px #ff007f;">GO FOR IT!</h1><div style="font-size:3rem;margin-top:40px;background:rgba(255,255,255,0.1);padding:20px 40px;border-radius:20px;border:2px solid #00ffff;">Antworten: <strong id="beamer-counter" style="color:#00ffff;">0</strong></div></div>
+                <div id="beamer-eval" style="display:none;width:100%;max-width:1000px;z-index:2;"><h2 id="beamer-frage-text" style="font-size:2.5rem;margin-bottom:30px;"></h2><div id="beamer-loesung" style="width:100%;margin-bottom:40px;"></div><div id="beamer-podium" style="display:flex;justify-content:center;gap:20px;align-items:flex-end;height:300px;"></div></div>
+                
+                <div id="beamer-finale" style="display:none;z-index:2;width:100%;">
+                    <div class="spotlight spot-left"></div>
+                    <div class="spotlight spot-right"></div>
+                    <div id="conf-container"></div>
+                    <h1 style="color:#ffd700;text-shadow:0 0 30px #ffd700;">🏆 SIEGEREHRUNG 🏆</h1>
+                    <div id="finale-podium" style="display:flex;justify-content:center;gap:30px;align-items:flex-end;height:400px;margin-top:40px;"></div>
+                    <!-- NEW SCROLL CONTAINER -->
+                    <div id="beamer-full-ranking-container" style="width:100%; max-width:600px; height:200px; overflow:hidden; margin:30px auto 0; position:relative; display:none;">
+                        <div id="beamer-ranking-list-inner" style="width:100%; position:absolute; top:0; left:0; padding-bottom: 200px;"></div>
+                    </div>
                 </div>
-            </div>
+                <script>
+                    const playFanfare=()=>{try{const ctx=new (window.AudioContext||window.webkitAudioContext)();const notes=[523.25,659.25,783.99,1046.50];notes.forEach((freq,i)=>{const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type='square';osc.frequency.setValueAtTime(freq,ctx.currentTime+i*0.15);gain.gain.setValueAtTime(0.1,ctx.currentTime+i*0.15);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.15+0.3);osc.connect(gain);gain.connect(ctx.destination);osc.start(ctx.currentTime+i*0.15);osc.stop(ctx.currentTime+i*0.15+0.3);});}catch(e){}};
+                    const shootConfetti=()=>{let cHTML='';let colors=['#e21b3c','#1368ce','#d89e00','#26890c','#ff007f'];for(let i=0;i<80;i++){let col=colors[Math.floor(Math.random()*colors.length)];cHTML+='<div class="confetti" style="left:'+(Math.random()*100)+'vw; animation-delay:'+(Math.random()*3)+'s; background-color:'+col+';"></div>';}document.getElementById('conf-container').innerHTML=cHTML;};
+                    const getAv=(b,c,s)=>{if(b.startsWith('emo:'))return '<div style="font-size:'+(s*0.6)+'px;margin-top:-'+(s*0.7)+'px;background:#fff;border-radius:50%;width:'+s+'px;height:'+s+'px;line-height:'+s+'px;margin-left:auto;margin-right:auto;border:4px solid '+c+';">'+b.split(':')[1]+'</div>';return '<div style="margin-top:-'+(s*0.7)+'px;background:url(\\''+b+'\\') center/cover;border-radius:50%;width:'+s+'px;height:'+s+'px;margin-left:auto;margin-right:auto;border:4px solid '+c+';"></div>';};
+                    
+                    const renderBeamerState = (s) => {
+                            document.getElementById('beamer-lobby').style.display=s.phase==='lobby'?'block':'none';
+                            document.getElementById('beamer-aktiv').style.display=s.phase==='aktiv'?'block':'none';
+                            document.getElementById('beamer-eval').style.display=s.phase==='eval'?'block':'none';
+                            document.getElementById('beamer-finale').style.display=s.phase==='finale'?'block':'none';
+                            if(s.phase==='aktiv') document.getElementById('beamer-counter').innerText=s.answers;
+                            if(s.phase==='eval'){
+                                document.getElementById('beamer-frage-text').innerText=s.frage;
+                                if(s.opts){
+                                    let loesungHtml='<div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; text-align:left; font-size:1.8rem; font-weight:bold;">';
+                                    let correctLetters=s.loesung.split(',').map(l=>l.trim());
+                                    ['A','B','C','D'].forEach(opt=>{
+                                        if(s.opts[opt]&&s.opts[opt]!=='-'){
+                                            if(correctLetters.includes(opt)){
+                                                loesungHtml+='<div style="background:rgba(0,255,136,0.2); color:#00ff88; padding:15px; border-radius:10px; border:2px solid #00ff88; box-shadow:0 0 15px rgba(0,255,136,0.3);">'+opt+': '+s.opts[opt]+'</div>';
+                                            }else{
+                                                loesungHtml+='<div style="background:rgba(255,0,0,0.2); color:#ff4444; padding:15px; border-radius:10px; border:2px solid #ff4444; text-decoration:line-through; opacity:0.7;">'+opt+': '+s.opts[opt]+'</div>';
+                                            }
+                                        }
+                                    });
+                                    loesungHtml+='</div>';
+                                    document.getElementById('beamer-loesung').innerHTML=loesungHtml;
+                                }else{
+                                    document.getElementById('beamer-loesung').innerHTML='<div style="font-size:3.5rem;font-weight:900;color:#00ff88;background:rgba(0,255,136,0.2);padding:20px;border-radius:15px;display:inline-block;">Lösung: '+s.loesung+'</div>';
+                                }
+                                let h='';
+                                s.ranking.slice(0,3).forEach((r,i)=>{
+                                    let c=['#ffd700','#c0c0c0','#cd7f32'][i];
+                                    h+='<div style="width:140px;background:'+c+';height:'+[200,150,110][i]+'px;border-radius:15px 15px 0 0;color:#000;font-weight:bold;position:relative;">'+getAv(r.bild,c,70)+'<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.name+'</div><div style="font-size:1.4rem;color:#fff;text-shadow:1px 1px 2px #000;">+'+r.pts+' Pkt</div><div style="font-size:0.8rem;">'+(r.time/1000).toFixed(1)+'s</div></div>';
+                                });
+                                document.getElementById('beamer-podium').innerHTML=h;
+                            }
+                            if(s.phase==='finale'){
+                                shootConfetti();playFanfare();
+                                let h='';
+                                s.ranking.slice(0,3).forEach((r,i)=>{
+                                    let c=['#ffd700','#e0e0e0','#cd7f32'][i];
+                                    h+='<div style="width:180px;background:'+c+';height:'+[280,200,150][i]+'px;border-radius:20px 20px 0 0;color:#000;font-weight:bold;position:relative;box-shadow:0 -5px 20px rgba(255,255,255,0.2);">'+getAv(r.bild,c,100)+'<div style="font-size:1.5rem;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.name+'</div><div style="font-size:2rem;color:#fff;text-shadow:2px 2px 4px #000;">'+r.pts+' Pkt</div></div>';
+                                });
+                                document.getElementById('finale-podium').innerHTML=h;
+                                
+                                const rankContainer = document.getElementById('beamer-full-ranking-container');
+                                const rankInner = document.getElementById('beamer-ranking-list-inner');
+                                let listHTML = '';
+                                if (s.ranking.length > 3) {
+                                    rankContainer.style.display = 'block';
+                                    for (let i = 3; i < s.ranking.length; i++) {
+                                        const r = s.ranking[i];
+                                        let avatarHtml = r.bild.startsWith('emo:') ? 
+                                            '<div class="beamer-rank-item-avatar" style="font-size:20px; background-color:#fff;">' + r.bild.split(':')[1] + '</div>' : 
+                                            '<div class="beamer-rank-item-avatar" style="background-image:url(\\'' + r.bild + '\\');"></div>';
+                                        listHTML += '<div class="beamer-rank-item"><div class="beamer-rank-item-name"><span style="color:#ffd700; width:30px; text-align:left;">#' + (i + 1) + '</span>' + avatarHtml + '<span>' + r.name + '</span></div><span class="beamer-rank-item-score">' + r.pts + ' Pkt</span></div>';
+                                    }
+                                    rankInner.innerHTML = listHTML;
+                                    
+                                    let scrollPos = 0;
+                                    const scrollSpeed = 0.5;
+                                    if (window.bycsScrollInt) clearInterval(window.bycsScrollInt);
+                                    setTimeout(() => {
+                                        if (rankInner.clientHeight > rankContainer.clientHeight) {
+                                            window.bycsScrollInt = setInterval(() => {
+                                                scrollPos += scrollSpeed;
+                                                if (scrollPos >= rankInner.clientHeight - rankContainer.clientHeight) {
+                                                    scrollPos = 0; 
+                                                }
+                                                rankInner.style.transform = 'translateY(-' + scrollPos + 'px)';
+                                            }, 30);
+                                        }
+                                    }, 500);
+                                } else {
+                                    rankContainer.style.display = 'none';
+                                }
+                            }
+                    };
+                    
+                    window.addEventListener('storage',e=>{
+                        if(e.key==='bycs_beamer_state_${QUIZ_DB_ID}'){
+                            renderBeamerState(JSON.parse(e.newValue));
+                        }
+                    });
+                    
+                    const initState = localStorage.getItem('bycs_beamer_state_${QUIZ_DB_ID}');
+                    if(initState) { renderBeamerState(JSON.parse(initState)); }
+                <\/script>
+            </body>
+            </html>`;
+            bWin.document.open(); bWin.document.write(html); bWin.document.close();
+            if (!localStorage.getItem('bycs_beamer_state_' + QUIZ_DB_ID)) {
+                localStorage.setItem('bycs_beamer_state_' + QUIZ_DB_ID, JSON.stringify({ phase: 'lobby' }));
+            }
+        };
+
+        // Mass-Import Logic
+        $el('btn-mass-speichern').onclick = async function() {
+            let text = $el('l-mass-import').value;
+            if(!text.trim()) return;
+            this.innerText = "Importiere..."; this.disabled = true;
+            let lines = text.split('\n'), count = 0;
+            for(let line of lines) {
+                let d = line.split('|').map(s=>s.trim());
+                if(d.length >= 8) {
+                    await saveToMoodle({ typ:'Frage', rundenId:d[0], text:d[1], optA:d[2], optB:d[3], optC:d[4], optD:d[5], wert:d[6].toUpperCase(), zeit:d[7], status:'Bereit' });
+                    count++;
+                } else if(d.length === 7) {
+                    await saveToMoodle({ typ:'Frage', rundenId:d[0], text:d[1], optA:d[2], optB:d[3], optC:d[4], optD:d[5], wert:d[6].toUpperCase(), zeit:'20', status:'Bereit' });
+                    count++;
+                }
+            }
+            alert(count + " Fragen importiert!");
+            $el('l-mass-import').value = ""; this.innerText = "🚀 Einlesen"; this.disabled = false; updateLehrerList();
+        };
+
+        async function updateLehrerList() {
+            const data = await fetchDB();
+            let html = '';
+            let isAnyActive = false;
+            let statusZeile = data.find(d => d.typ === 'Status');
+            if (statusZeile && statusZeile.status === 'Aktiv') {
+                isAnyActive = true;
+                let baseId = statusZeile.rundenId.split('###')[0];
+                let frage = data.find(d => d.typ === 'Frage' && d.rundenId === baseId);
+                $el('l-aktive-runde-info').style.display = 'block';
+                $el('l-aktiv-rundenid').innerText = baseId;
+                $el('l-aktiv-frage').innerText = frage ? frage.text : "Lade...";
+                let optsHtml = "";
+                if(frage) { ['A','B','C','D'].forEach(o => { let val = frage['opt'+o]; if(val && val !== '-') optsHtml += `<div class="p-1 border rounded bg-light"><strong>${o}:</strong> ${val}</div>`; }); }
+                $el('l-aktiv-opts').innerHTML = optsHtml;
+                if(teacherPollInterval) clearInterval(teacherPollInterval);
+                teacherPollInterval = setInterval(async () => {
+                    try {
+                        let currentState = JSON.parse(localStorage.getItem('bycs_beamer_state_' + QUIZ_DB_ID) || "{}");
+                        if (currentState.phase !== 'aktiv') return; // State-Protect: Nichts überschreiben wenn nicht mehr im Aktiv-Status!
+
+                        const d2 = await fetchDB();
+                        if (!d2 || d2.length === 0) return; // Verhindert Bug bei leeren DB-Antworten
+                        let st = d2.find(d => d.typ === 'Status');
+                        if (!st || st.status !== 'Aktiv') return;
+                        
+                        let count = d2.filter(d => d.typ === 'Schueler' && d.rundenId === statusZeile.rundenId && d.wert && d.wert !== "-").length;
+                        let counterEl = $el('l-antwort-counter');
+                        if(counterEl) counterEl.innerText = count;
+                        if (currentState.answers !== count) {
+                            currentState.answers = count;
+                            localStorage.setItem('bycs_beamer_state_' + QUIZ_DB_ID, JSON.stringify(currentState));
+                        }
+                    } catch(e) {}
+                }, 2000);
+            } else { $el('l-aktive-runde-info').style.display = 'none'; if(teacherPollInterval) clearInterval(teacherPollInterval); }
             
-            <div class="preview-box flex-grow-1 my-3" style="background: #f8f9fa; border: 1px solid #eee; padding: 10px; border-radius: 8px; max-height: 120px; overflow: hidden; font-size: 0.85rem; color: #666;">
-                [[Fragen_Input]]
-            </div>
+            data.filter(d => d.typ === 'Frage').sort((a,b)=>parseInt(a.rid)-parseInt(b.rid)).forEach(f => {
+                let isUsed = (f.status === 'Verwendet');
+                html += `<div class="list-group-item d-flex justify-content-between align-items-center mb-1 ${isUsed ? 'bg-light text-muted' : ''}">
+                    <div class="text-truncate" style="max-width:75%;"><strong>${f.rundenId}</strong>: ${f.text}</div>
+                    <button class="btn btn-sm ${isUsed?'btn-warning':'btn-success'} btn-start shadow-sm" data-rid="${f.rid}" data-rundenid="${f.rundenId}" ${isAnyActive?'disabled':''}>${isUsed?'🔄':'▶️ Start'}</button>
+                </div>`;
+            });
+            $el('l-fragenliste').innerHTML = html;
+            $els('.btn-start').forEach(btn => {
+                btn.onclick = async function() {
+                    this.innerText = "..."; this.disabled = true;
+                    let rId = this.getAttribute('data-rundenid'), fRid = this.getAttribute('data-rid');
+                    let sessionPlayId = rId + "###" + Date.now().toString();
+                    let stRow = data.find(d => d.typ === 'Status');
+                    let obj = { typ: 'Status', rundenId: sessionPlayId, status: 'Aktiv', wert: '0', text: '-' };
+                    if (stRow) obj.rid = stRow.rid;
+                    await saveToMoodle(obj);
+                    localStorage.setItem('bycs_beamer_state_' + QUIZ_DB_ID, JSON.stringify({ phase: 'aktiv', answers: 0 }));
+                    await saveToMoodle({ rid: fRid, status: 'Verwendet' }); 
+                    updateLehrerList();
+                };
+            });
+        }
 
-            <div class="d-grid gap-2">
-                <button type="button" class="btn fw-bold" style="background-color: #26890c; color: white; border-radius: 8px;" onclick="copyByCatchData(this)">
-                    DATEN KOPIEREN 🚀
-                </button>
-                <div class="text-center">
-                    ##more##
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+        $el('btn-lehrer-stop').onclick = async function() {
+            this.innerText = "..."; this.disabled = true;
+            clearInterval(teacherPollInterval);
+            const data = await fetchDB();
+            let statusZeile = data.find(d => d.typ === 'Status');
+            let baseId = statusZeile.rundenId.split('###')[0], frage = data.find(d => d.typ === 'Frage' && d.rundenId === baseId);
+            statusZeile.status = 'Auswertung'; // Lokaler Sofort-Schutz
+            await saveToMoodle({ rid: statusZeile.rid, status: 'Auswertung' });
+            
+            let answers = data.filter(d => d.typ === 'Schueler' && d.rundenId === statusZeile.rundenId && d.wert !== '-');
+            let ranking = [];
+            let correctArr = frage.wert.split(',').map(s=>s.trim()).sort().join(',');
+            let allowedTimeSec = parseInt(frage.zeit) || 20;
+            let allowedTimeMs = allowedTimeSec * 1000;
+            
+            for (let a of answers) {
+                let isCorrect = (a.wert.split(',').map(s=>s.trim()).sort().join(',') === correctArr && correctArr !== "");
+                let timeMs = parseInt(a.zeit) || 99999, roundPts = 0;
+                if (isCorrect) roundPts = 500 + Math.floor(Math.max(0, allowedTimeMs - timeMs) / allowedTimeMs * 500);
+                let currentPts = parseInt(a.optA) || 0;
+                await saveToMoodle({ rid: a.rid, optA: (currentPts + roundPts).toString() });
+                ranking.push({ name: a.name, bild: a.bild, pts: roundPts, time: timeMs });
+            }
+            ranking.sort((a,b) => b.pts - a.pts || a.time - b.time);
+            localStorage.setItem('bycs_beamer_state_' + QUIZ_DB_ID, JSON.stringify({ phase: 'eval', frage: frage.text, loesung: frage.wert, opts: { A: frage.optA, B: frage.optB, C: frage.optC, D: frage.optD }, ranking: ranking }));
+            this.innerText = "⏳ Runde beenden & Auswerten"; this.disabled = false; updateLehrerList();
+        };
 
- Fußzeile 
+        $el('btn-finale-starten').onclick = async function() {
+            this.innerText = "..."; this.disabled = true;
+            if(teacherPollInterval) clearInterval(teacherPollInterval); // Wichtig! Stoppt das Polling endgültig
+            const data = await fetchDB();
+            let statusZeile = data.find(d => d.typ === 'Status');
+            if (statusZeile && statusZeile.status === 'Aktiv') {
+                await saveToMoodle({ rid: statusZeile.rid, status: 'Beendet' });
+            }
+            let ranking = data.filter(d => d.typ === 'Schueler').map(s => ({ name: s.name, bild: s.bild, pts: parseInt(s.optA) || 0 })).sort((a,b) => b.pts - a.pts);
+            localStorage.setItem('bycs_beamer_state_' + QUIZ_DB_ID, JSON.stringify({ phase: 'finale', ranking: ranking }));
+            this.innerText = "🏆 Siegerehrung starten"; this.disabled = false;
+        };
 
- </div> 
-</div>
+        $el('btn-db-leeren').onclick = async function() {
+            if(confirm("🧨 Wirklich ALLES löschen?")) {
+                this.innerText = "..."; this.disabled = true;
+                
+                // Lokalen Browser-Speicher (Cache) für dieses Spiel komplett leeren
+                Object.keys(localStorage).forEach(key => {
+                    if(key.startsWith('bycs_')) {
+                        localStorage.removeItem(key);
+                    }
+                });
+                
+                const viewRes = await fetch(window.location.origin + '/mod/data/view.php?id=' + QUIZ_DB_ID + '&mode=list&perpage=1000&_t=' + Date.now(), noCacheOptions);
+                const doc = new DOMParser().parseFromString(await viewRes.text(), 'text/html');
+                const delLinks = doc.querySelectorAll('.delete-wrapper a');
+                for(let i=0; i<delLinks.length; i++) {
+                    if(delLinks[i] && delLinks[i].href) await fetch(delLinks[i].href + '&confirm=1', noCacheOptions);
+                }
+                alert("Gelöscht!"); location.reload();
+            }
+        };
+    } 
+    // --- SCHÜLER MODUS ---
+    else {
+        let studentCountdownInterval = null;
+        function updateUIIdentity() {
+            $el('s-stat-name').innerText = currentUser.name;
+            let imgBox = $el('s-stat-img');
+            if(currentUser.img.startsWith('emo:')) { imgBox.innerText = currentUser.img.split(':')[1]; imgBox.style.background = '#fff'; imgBox.style.fontSize = '20px'; imgBox.style.textAlign='center'; imgBox.style.lineHeight='30px'; }
+            else { imgBox.style.backgroundImage = 'url('+currentUser.img+')'; imgBox.innerText = ''; }
+        }
 
-<script>
-function filterByCatchCards() {
-    const query = document.getElementById('bycatchSearch').value.toLowerCase();
-    const cards = document.querySelectorAll('.bycatch-card-item');
-    cards.forEach(card => {
-        const content = card.getAttribute('data-search').toLowerCase();
-        card.style.display = content.includes(query) ? "block" : "none";
-    });
-}
+        // Initialsierung
+        let lsName = localStorage.getItem('bycs_quiz_name'), lsPic = localStorage.getItem('bycs_quiz_pic');
+        if(lsName) currentUser.name = lsName;
+        if(lsPic) currentUser.img = lsPic;
+        
+        let localRid = localStorage.getItem('bycs_quiz_rid');
 
-function copyByCatchData(btn) {
-    const text = btn.closest('.card-body').querySelector('.preview-box').innerText;
-    navigator.clipboard.writeText(text);
-    alert("Quiz-Daten kopiert! Füge sie jetzt im Gamemaster-Import ein.");
-}
+        $el('s-warte-screen').style.display = 'block';
+        $el('btn-pull-frage').style.display = 'inline-block';
+        updateUIIdentity();
+
+        $el('btn-edit-profile').onclick = () => { 
+            $el('s-profile-edit').style.display = 'block'; 
+            $el('s-input-name').value = currentUser.name;
+        };
+        $els('#s-emoji-picker span').forEach(s => {
+            s.onclick = function() { 
+                currentUser.img = "emo:" + this.innerText; 
+                $els('#s-emoji-picker span').forEach(x=>x.style.background='none');
+                this.style.background='#005a9c33'; this.style.borderRadius='50%';
+            };
+        });
+        $el('btn-save-profile').onclick = () => {
+            let n = $el('s-input-name').value.trim();
+            if(n) { currentUser.name = n; localStorage.setItem('bycs_quiz_name', n); }
+            localStorage.setItem('bycs_quiz_pic', currentUser.img); 
+            $el('s-profile-edit').style.display = 'none';
+            updateUIIdentity();
+        };
+
+        $el('btn-pull-frage').onclick = async function() {
+            this.innerText = "..."; this.disabled = true;
+            const data = await fetchDB();
+            
+            // GHOST-ID PROTECTOR (Falls Lehrer die DB leert oder Name geändert wurde)
+            let myRow = null;
+            if (localRid) myRow = data.find(d => d.rid === localRid && d.typ === "Schueler");
+            if (!myRow) myRow = data.find(d => d.name === currentUser.name && d.typ === "Schueler");
+            
+            if (myRow && myRow.rid) { 
+                localRid = myRow.rid; localStorage.setItem('bycs_quiz_rid', localRid); 
+            } else {
+                localRid = null; localStorage.removeItem('bycs_quiz_rid');
+            }
+
+            // Automatischer Moodle-Name Fetch, falls noch "Gast"
+            if (!myRow && currentUser.name.startsWith("Gast-")) {
+                let mNameEl = document.querySelector('.usertext, .userbutton .usertext, .logininfo a:not([href*="logout"])');
+                if (mNameEl && !mNameEl.textContent.includes('{full')) {
+                    currentUser.name = mNameEl.textContent.trim(); localStorage.setItem('bycs_quiz_name', currentUser.name);
+                }
+                let mImgEl = document.querySelector('img.userpicture');
+                if (mImgEl && mImgEl.src) {
+                    currentUser.img = mImgEl.src; localStorage.setItem('bycs_quiz_pic', currentUser.img);
+                }
+                updateUIIdentity();
+            }
+
+            let statusZeile = data.find(d => d.typ === 'Status');
+            if (statusZeile && statusZeile.status === 'Aktiv') {
+                let baseId = statusZeile.rundenId.split('###')[0], frage = data.find(d => d.typ === 'Frage' && d.rundenId === baseId);
+                aktuellerStatusObj = { rundenId: statusZeile.rundenId };
+                if (myRow && myRow.rundenId === statusZeile.rundenId && myRow.wert !== "-") {
+                    $el('s-warte-text').innerText = "✅ Eingeloggt!"; this.innerText = "Status prüfen"; this.disabled = false; return;
+                }
+                $el('s-warte-screen').style.display = 'none';
+                $el('s-spiel-screen').style.display = 'block';
+                $el('s-frage-text').innerText = frage.text;
+                let subBtn = $el('btn-student-submit');
+                subBtn.innerText = "✅ Antwort einloggen"; subBtn.disabled = true;
+                subBtn.onclick = () => submitStudentAnswer();
+                
+                const grid = $el('s-antwort-grid'); grid.innerHTML = '';
+                ['A','B','C','D'].forEach(opt => {
+                    let val = frage['opt'+opt];
+                    if(val && val !== '-') {
+                        let btn = document.createElement('button'); btn.className = `btn-antwort btn-${opt.toLowerCase()}`; btn.innerText = `${opt}: ${val}`;
+                        btn.onclick = function() { 
+                            this.classList.toggle('selected'); 
+                            subBtn.disabled = $els('.btn-antwort.selected').length === 0; 
+                        };
+                        grid.appendChild(btn);
+                    }
+                });
+
+                let zeitLimit = parseInt(frage.zeit) || 20;
+                $el('s-countdown').innerText = zeitLimit;
+                if (studentCountdownInterval) clearInterval(studentCountdownInterval);
+                studentCountdownInterval = setInterval(() => {
+                    zeitLimit--;
+                    $el('s-countdown').innerText = zeitLimit;
+                    if (zeitLimit <= 0) {
+                        clearInterval(studentCountdownInterval);
+                        if (!subBtn.disabled) {
+                            submitStudentAnswer();
+                        } else {
+                            subBtn.innerText = "⏳ Zeit abgelaufen...";
+                            submitStudentAnswer("-");
+                        }
+                    }
+                }, 1000);
+
+                localQuizStartTimer = Date.now();
+            } else { this.innerText = "🚀 Neu versuchen"; this.disabled = false; }
+        };
+
+        async function submitStudentAnswer(overrideSelected = null) {
+            let subBtn = $el('btn-student-submit');
+            subBtn.disabled = true; subBtn.innerText = "...";
+            if (studentCountdownInterval) clearInterval(studentCountdownInterval);
+
+            let reaktion = Date.now() - localQuizStartTimer;
+            let selected = overrideSelected;
+            if (selected === null) {
+                selected = Array.from($els('.btn-antwort.selected')).map(b => b.innerText.split(':')[0]).join(',');
+            }
+            if (!selected) selected = "-"; // Fallback für leere automatische Absendungen
+            
+            let updateObj = { typ: 'Schueler', name: currentUser.name, bild: currentUser.img, rundenId: aktuellerStatusObj.rundenId, wert: selected, zeit: reaktion.toString() };
+            if (localRid) updateObj.rid = localRid;
+            
+            let success = await saveToMoodle(updateObj);
+            if (!success) {
+                subBtn.disabled = false; subBtn.innerText = "❌ Fehler! Nochmal klicken"; return;
+            }
+            
+            if (!localRid) {
+                const data2 = await fetchDB();
+                let myNewRow = data2.find(d => d.name === currentUser.name && d.typ === "Schueler");
+                if(myNewRow) { localRid = myNewRow.rid; localStorage.setItem('bycs_quiz_rid', localRid); }
+            }
+            
+            $el('s-spiel-screen').style.display = 'none';
+            $el('s-warte-screen').style.display = 'block';
+            $el('s-warte-text').innerText = "✅ ("+(reaktion/1000).toFixed(1)+"s) - Warte auf Auswertung...";
+            let pullBtn = $el('btn-pull-frage');
+            pullBtn.innerText = "🚀 Nächste Frage"; pullBtn.disabled = false;
+        }
+    }
+    };
+
+    const initAllGames = () => {
+        document.querySelectorAll('.gscheidhaferl-app-wrapper').forEach(wrapper => {
+            if (!wrapper.dataset.initialized) {
+                wrapper.dataset.initialized = 'true';
+                initGame(wrapper);
+            }
+        });
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initAllGames);
+    } else {
+        initAllGames();
+    }
+})();
+
 </script>
