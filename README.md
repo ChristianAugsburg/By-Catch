@@ -391,3 +391,17 @@ function copyByCatchData(btn) {
 }
 </script>
 ```
+
+
+## 🛠️ Development & Security Statement
+
+Dieses Repository entstand im Rahmen eines modernen **AI-assisted Development Workflows** (Vibecoding). 
+
+> **Mensch & Maschine im Team:** Die KI liefert die Code-Struktur, die didaktische und technische Qualitätskontrolle liegt zu 100 % in menschlicher Hand.
+
+### Sicherheits- & Performance-Auditing:
+* **XSS-Schutz:** Alle dynamischen Usereingaben und Profilnamen werden vor dem Rendering im DOM konsequent über eine Maskierungsfunktion (`escapeHTML`) abgesichert, um Stored-XSS-Attacken zu verhindern.
+* **Server-Schonung:** Das System verzichtet im Schüler-Modus bewusst auf aggressives automatisiertes Polling, um die Performance der schulischen LMS-Infrastruktur (ByCS/Moodle) auch bei hoher Gleichzeitigkeit zu schonen.
+* **Datenschutz:** Die Datenverarbeitung erfolgt lokal im Browserkontext und über die native Moodle-Datenbank-Aktivität – es werden keine externen APIs oder Tracker geladen.
+
+Fehler gefunden oder Verbesserungsvorschläge? Pull Requests und fachliche Code Reviews sind jederzeit herzlich willkommen!
