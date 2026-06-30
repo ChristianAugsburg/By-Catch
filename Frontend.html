@@ -81,6 +81,14 @@
         const $el = (id) => appWrapper.querySelector('#' + id);
         const $els = (sel) => appWrapper.querySelectorAll(sel);
 
+        // STRIKTER XSS-SCHUTZ: Maskierungsfunktion für Usereingaben außerhalb sicherer Kontexte
+        const escapeHTML = (str) => {
+            if (!str) return '';
+            return str.toString().replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        };
+
         // CSS sicher über JS injizieren, um Moodle-Editor-Filter bei Lehrer-Accounts zu umgehen
         if (!document.getElementById('gh-dynamic-style')) {
             const style = document.createElement('style');
@@ -118,11 +126,10 @@
         return null;
     }
 
-    // --- REPARIERTE DATENBANK EXTRAKTION ---
+    // --- DATENBANK EXTRAKTION MIT TRY-CATCH FEHLERSCHUTZ ---
     async function fetchDB() {
         if (!QUIZ_DB_ID) return [];
         try {
-            // &mode=list&perpage=1000 zwingt Moodle dazu, alle Einträge auf einer Seite zu zeigen (umgeht die 10er Pagination)
             let res = await fetch(window.location.origin + '/mod/data/view.php?id=' + QUIZ_DB_ID + '&mode=list&perpage=1000&_t=' + Date.now(), noCacheOptions);
             const doc = new DOMParser().parseFromString(await res.text(), 'text/html');
             const data = [];
@@ -130,24 +137,23 @@
                 const getVal = cls => { const el = row.querySelector(cls); return el ? el.textContent.trim() : null; };
                 let rid = null;
                 const editL = row.querySelector('a[href*="edit.php"]');
-                if (editL) rid = editL.href.match(/rid=(\d+)/)[1];
+                if (editL) {
+                    const match = editL.href.match(/rid=(\d+)/);
+                    if (match) rid = match[1];
+                }
                 
-                // Moodle Profilbild & Echten Namen auslesen
                 let bild = "-";
                 let extraName = null;
                 let imgEl = row.querySelector('.db-userpicture img');
                 if(imgEl && imgEl.src) {
                     bild = imgEl.src;
-                    // Lese den echten Namen aus alt-Attribut
                     extraName = imgEl.alt || imgEl.title;
                 }
                 
-                // Avatar Fallback (Emoji auslesen falls kein Moodle Bild)
                 let rawBild = getVal('.db-bildurl');
                 if(rawBild && rawBild !== "-" && (rawBild.startsWith("emo:") || rawBild.startsWith("http"))) bild = rawBild;
                 if(!bild || bild === "-") bild = "emo:👤";
 
-                // Namen auflösen (Spielername oder Echter Moodle Name)
                 let sName = getVal('.db-spielername');
                 if((!sName || sName === "-") && extraName) sName = extraName;
 
@@ -198,18 +204,17 @@
 
     // --- LEHRER MODUS ---
     if (isTeacher) {
-        // Dashboard sofort anzeigen, wenn im Lehrer-Modus
         $el('l-dashboard').style.display = 'block';
         updateLehrerList();
         $el('btn-toggle-ai').onclick = function() {
             let el = $el('info-ai'); el.style.display = (el.style.display === 'none') ? 'block' : 'none';
         };
 
-        // BEAMER WINDOW INIT
+        // BEAMER WINDOW INIT MIT INTEGRIERTER XSS-FILTERLOGIK
         $el('btn-open-beamer').onclick = () => {
             let bWin = window.open('about:blank', '_blank', 'width=1280,height=720,menubar=no,toolbar=no,location=no');
             if(!bWin) { alert("⚠️ Bitte Popups für Moodle erlauben!"); return; }
-            bWin.focus(); // Zwingt das Fenster garantiert in den Vordergrund
+            bWin.focus();
             let html = `<!DOCTYPE html>
             <html>
             <head>
@@ -225,7 +230,6 @@
                     @keyframes pulse{from{transform:scale(1);}to{transform:scale(1.05);}}
                     .confetti{position:absolute;top:-20px;width:10px;height:20px;z-index:10;animation:fall 3.5s linear infinite;}
                     @keyframes fall{to{transform:translateY(110vh) rotate(720deg);}}
-                    /* NEW SCROLL LIST STYLES */
                     .beamer-rank-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 15px; background: rgba(255,255,255,0.08); border-radius: 8px; margin-bottom: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); color: #fff; font-size: 1.1rem; font-weight: bold; width: 100%; box-sizing: border-box; }
                     .beamer-rank-item-name { display: flex; align-items: center; gap: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
                     .beamer-rank-item-avatar { width: 35px; height: 35px; border-radius: 50%; background-size: cover; background-position: center; border: 2px solid #ffd700; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: #000; background-color: #fff; flex-shrink: 0; }
@@ -243,15 +247,28 @@
                     <div id="conf-container"></div>
                     <h1 style="color:#ffd700;text-shadow:0 0 30px #ffd700;">🏆 SIEGEREHRUNG 🏆</h1>
                     <div id="finale-podium" style="display:flex;justify-content:center;gap:30px;align-items:flex-end;height:400px;margin-top:40px;"></div>
-                    <!-- NEW SCROLL CONTAINER -->
                     <div id="beamer-full-ranking-container" style="width:100%; max-width:600px; height:200px; overflow:hidden; margin:30px auto 0; position:relative; display:none;">
                         <div id="beamer-ranking-list-inner" style="width:100%; position:absolute; top:0; left:0; padding-bottom: 200px;"></div>
                     </div>
                 </div>
                 <script>
+                    // Lokaler XSS-Filter für den Beamer-Browserkontext
+                    const escapeHTML = (str) => {
+                        if (!str) return '';
+                        return str.toString().replace(/[&<>'"]/g, function(tag) {
+                            return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag;
+                        });
+                    };
+
                     const playFanfare=()=>{try{const ctx=new (window.AudioContext||window.webkitAudioContext)();const notes=[523.25,659.25,783.99,1046.50];notes.forEach((freq,i)=>{const osc=ctx.createOscillator();const gain=ctx.createGain();osc.type='square';osc.frequency.setValueAtTime(freq,ctx.currentTime+i*0.15);gain.gain.setValueAtTime(0.1,ctx.currentTime+i*0.15);gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+i*0.15+0.3);osc.connect(gain);gain.connect(ctx.destination);osc.start(ctx.currentTime+i*0.15);osc.stop(ctx.currentTime+i*0.15+0.3);});}catch(e){}};
                     const shootConfetti=()=>{let cHTML='';let colors=['#e21b3c','#1368ce','#d89e00','#26890c','#ff007f'];for(let i=0;i<80;i++){let col=colors[Math.floor(Math.random()*colors.length)];cHTML+='<div class="confetti" style="left:'+(Math.random()*100)+'vw; animation-delay:'+(Math.random()*3)+'s; background-color:'+col+';"></div>';}document.getElementById('conf-container').innerHTML=cHTML;};
-                    const getAv=(b,c,s)=>{if(b.startsWith('emo:'))return '<div style="font-size:'+(s*0.6)+'px;margin-top:-'+(s*0.7)+'px;background:#fff;border-radius:50%;width:'+s+'px;height:'+s+'px;line-height:'+s+'px;margin-left:auto;margin-right:auto;border:4px solid '+c+';">'+b.split(':')[1]+'</div>';return '<div style="margin-top:-'+(s*0.7)+'px;background:url(\\''+b+'\\') center/cover;border-radius:50%;width:'+s+'px;height:'+s+'px;margin-left:auto;margin-right:auto;border:4px solid '+c+';"></div>';};
+                    
+                    // Avatar-Generator mit XSS-Schutz für CSS-Injections und Emojis
+                    const getAv=(b,c,s)=>{
+                        if(!b) return '';
+                        if(b.startsWith('emo:')) return '<div style="font-size:'+(s*0.6)+'px;margin-top:-'+(s*0.7)+'px;background:#fff;border-radius:50%;width:'+s+'px;height:'+s+'px;line-height:'+s+'px;margin-left:auto;margin-right:auto;border:4px solid '+c+';">'+escapeHTML(b.split(':')[1])+'</div>';
+                        return '<div style="margin-top:-'+(s*0.7)+'px;background:url(\\''+b.replace(/'/g, "%27")+'\\') center/cover;border-radius:50%;width:'+s+'px;height:'+s+'px;margin-left:auto;margin-right:auto;border:4px solid '+c+';"></div>';
+                    };
                     
                     const renderBeamerState = (s) => {
                             document.getElementById('beamer-lobby').style.display=s.phase==='lobby'?'block':'none';
@@ -267,21 +284,21 @@
                                     ['A','B','C','D'].forEach(opt=>{
                                         if(s.opts[opt]&&s.opts[opt]!=='-'){
                                             if(correctLetters.includes(opt)){
-                                                loesungHtml+='<div style="background:rgba(0,255,136,0.2); color:#00ff88; padding:15px; border-radius:10px; border:2px solid #00ff88; box-shadow:0 0 15px rgba(0,255,136,0.3);">'+opt+': '+s.opts[opt]+'</div>';
+                                                loesungHtml+='<div style="background:rgba(0,255,136,0.2); color:#00ff88; padding:15px; border-radius:10px; border:2px solid #00ff88; box-shadow:0 0 15px rgba(0,255,136,0.3);">'+opt+': '+escapeHTML(s.opts[opt])+'</div>';
                                             }else{
-                                                loesungHtml+='<div style="background:rgba(255,0,0,0.2); color:#ff4444; padding:15px; border-radius:10px; border:2px solid #ff4444; text-decoration:line-through; opacity:0.7;">'+opt+': '+s.opts[opt]+'</div>';
+                                                loesungHtml+='<div style="background:rgba(255,0,0,0.2); color:#ff4444; padding:15px; border-radius:10px; border:2px solid #ff4444; text-decoration:line-through; opacity:0.7;">'+opt+': '+escapeHTML(s.opts[opt])+'</div>';
                                             }
                                         }
                                     });
                                     loesungHtml+='</div>';
                                     document.getElementById('beamer-loesung').innerHTML=loesungHtml;
                                 }else{
-                                    document.getElementById('beamer-loesung').innerHTML='<div style="font-size:3.5rem;font-weight:900;color:#00ff88;background:rgba(0,255,136,0.2);padding:20px;border-radius:15px;display:inline-block;">Lösung: '+s.loesung+'</div>';
+                                    document.getElementById('beamer-loesung').innerHTML='<div style="font-size:3.5rem;font-weight:900;color:#00ff88;background:rgba(0,255,136,0.2);padding:20px;border-radius:15px;display:inline-block;">Lösung: '+escapeHTML(s.loesung)+'</div>';
                                 }
                                 let h='';
                                 s.ranking.slice(0,3).forEach((r,i)=>{
                                     let c=['#ffd700','#c0c0c0','#cd7f32'][i];
-                                    h+='<div style="width:140px;background:'+c+';height:'+[200,150,110][i]+'px;border-radius:15px 15px 0 0;color:#000;font-weight:bold;position:relative;">'+getAv(r.bild,c,70)+'<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.name+'</div><div style="font-size:1.4rem;color:#fff;text-shadow:1px 1px 2px #000;">+'+r.pts+' Pkt</div><div style="font-size:0.8rem;">'+(r.time/1000).toFixed(1)+'s</div></div>';
+                                    h+='<div style="width:140px;background:'+c+';height:'+[200,150,110][i]+'px;border-radius:15px 15px 0 0;color:#000;font-weight:bold;position:relative;">'+getAv(r.bild,c,70)+'<div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escapeHTML(r.name)+'</div><div style="font-size:1.4rem;color:#fff;text-shadow:1px 1px 2px #000;">+'+r.pts+' Pkt</div><div style="font-size:0.8rem;">'+(r.time/1000).toFixed(1)+'s</div></div>';
                                 });
                                 document.getElementById('beamer-podium').innerHTML=h;
                             }
@@ -290,7 +307,7 @@
                                 let h='';
                                 s.ranking.slice(0,3).forEach((r,i)=>{
                                     let c=['#ffd700','#e0e0e0','#cd7f32'][i];
-                                    h+='<div style="width:180px;background:'+c+';height:'+[280,200,150][i]+'px;border-radius:20px 20px 0 0;color:#000;font-weight:bold;position:relative;box-shadow:0 -5px 20px rgba(255,255,255,0.2);">'+getAv(r.bild,c,100)+'<div style="font-size:1.5rem;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+r.name+'</div><div style="font-size:2rem;color:#fff;text-shadow:2px 2px 4px #000;">'+r.pts+' Pkt</div></div>';
+                                    h+='<div style="width:180px;background:'+c+';height:'+[280,200,150][i]+'px;border-radius:20px 20px 0 0;color:#000;font-weight:bold;position:relative;box-shadow:0 -5px 20px rgba(255,255,255,0.2);">'+getAv(r.bild,c,100)+'<div style="font-size:1.5rem;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+escapeHTML(r.name)+'</div><div style="font-size:2rem;color:#fff;text-shadow:2px 2px 4px #000;">'+r.pts+' Pkt</div></div>';
                                 });
                                 document.getElementById('finale-podium').innerHTML=h;
                                 
@@ -302,9 +319,9 @@
                                     for (let i = 3; i < s.ranking.length; i++) {
                                         const r = s.ranking[i];
                                         let avatarHtml = r.bild.startsWith('emo:') ? 
-                                            '<div class="beamer-rank-item-avatar" style="font-size:20px; background-color:#fff;">' + r.bild.split(':')[1] + '</div>' : 
-                                            '<div class="beamer-rank-item-avatar" style="background-image:url(\\'' + r.bild + '\\');"></div>';
-                                        listHTML += '<div class="beamer-rank-item"><div class="beamer-rank-item-name"><span style="color:#ffd700; width:30px; text-align:left;">#' + (i + 1) + '</span>' + avatarHtml + '<span>' + r.name + '</span></div><span class="beamer-rank-item-score">' + r.pts + ' Pkt</span></div>';
+                                            '<div class="beamer-rank-item-avatar" style="font-size:20px; background-color:#fff;">' + escapeHTML(r.bild.split(':')[1]) + '</div>' : 
+                                            '<div class="beamer-rank-item-avatar" style="background-image:url(\\'' + r.bild.replace(/'/g, "%27") + '\\');"></div>';
+                                        listHTML += '<div class="beamer-rank-item"><div class="beamer-rank-item-name"><span style="color:#ffd700; width:30px; text-align:left;">#' + (i + 1) + '</span>' + avatarHtml + '<span>' + escapeHTML(r.name) + '</span></div><span class="beamer-rank-item-score">' + r.pts + ' Pkt</span></div>';
                                     }
                                     rankInner.innerHTML = listHTML;
                                     
@@ -378,16 +395,16 @@
                 $el('l-aktiv-rundenid').innerText = baseId;
                 $el('l-aktiv-frage').innerText = frage ? frage.text : "Lade...";
                 let optsHtml = "";
-                if(frage) { ['A','B','C','D'].forEach(o => { let val = frage['opt'+o]; if(val && val !== '-') optsHtml += `<div class="p-1 border rounded bg-light"><strong>${o}:</strong> ${val}</div>`; }); }
+                if(frage) { ['A','B','C','D'].forEach(o => { let val = frage['opt'+o]; if(val && val !== '-') optsHtml += `<div class="p-1 border rounded bg-light"><strong>${o}:</strong> ${escapeHTML(val)}</div>`; }); }
                 $el('l-aktiv-opts').innerHTML = optsHtml;
                 if(teacherPollInterval) clearInterval(teacherPollInterval);
                 teacherPollInterval = setInterval(async () => {
                     try {
                         let currentState = JSON.parse(localStorage.getItem('bycs_beamer_state_' + QUIZ_DB_ID) || "{}");
-                        if (currentState.phase !== 'aktiv') return; // State-Protect: Nichts überschreiben wenn nicht mehr im Aktiv-Status!
+                        if (currentState.phase !== 'aktiv') return;
 
                         const d2 = await fetchDB();
-                        if (!d2 || d2.length === 0) return; // Verhindert Bug bei leeren DB-Antworten
+                        if (!d2 || d2.length === 0) return;
                         let st = d2.find(d => d.typ === 'Status');
                         if (!st || st.status !== 'Aktiv') return;
                         
@@ -405,8 +422,8 @@
             data.filter(d => d.typ === 'Frage').sort((a,b)=>parseInt(a.rid)-parseInt(b.rid)).forEach(f => {
                 let isUsed = (f.status === 'Verwendet');
                 html += `<div class="list-group-item d-flex justify-content-between align-items-center mb-1 ${isUsed ? 'bg-light text-muted' : ''}">
-                    <div class="text-truncate" style="max-width:75%;"><strong>${f.rundenId}</strong>: ${f.text}</div>
-                    <button class="btn btn-sm ${isUsed?'btn-warning':'btn-success'} btn-start shadow-sm" data-rid="${f.rid}" data-rundenid="${f.rundenId}" ${isAnyActive?'disabled':''}>${isUsed?'🔄':'▶️ Start'}</button>
+                    <div class="text-truncate" style="max-width:75%;"><strong>${escapeHTML(f.rundenId)}</strong>: ${escapeHTML(f.text)}</div>
+                    <button class="btn btn-sm ${isUsed?'btn-warning':'btn-success'} btn-start shadow-sm" data-rid="${f.rid}" data-rundenid="${escapeHTML(f.rundenId)}" ${isAnyActive?'disabled':''}>${isUsed?'🔄':'▶️ Start'}</button>
                 </div>`;
             });
             $el('l-fragenliste').innerHTML = html;
@@ -432,7 +449,7 @@
             const data = await fetchDB();
             let statusZeile = data.find(d => d.typ === 'Status');
             let baseId = statusZeile.rundenId.split('###')[0], frage = data.find(d => d.typ === 'Frage' && d.rundenId === baseId);
-            statusZeile.status = 'Auswertung'; // Lokaler Sofort-Schutz
+            statusZeile.status = 'Auswertung';
             await saveToMoodle({ rid: statusZeile.rid, status: 'Auswertung' });
             
             let answers = data.filter(d => d.typ === 'Schueler' && d.rundenId === statusZeile.rundenId && d.wert !== '-');
@@ -456,7 +473,7 @@
 
         $el('btn-finale-starten').onclick = async function() {
             this.innerText = "..."; this.disabled = true;
-            if(teacherPollInterval) clearInterval(teacherPollInterval); // Wichtig! Stoppt das Polling endgültig
+            if(teacherPollInterval) clearInterval(teacherPollInterval);
             const data = await fetchDB();
             let statusZeile = data.find(d => d.typ === 'Status');
             if (statusZeile && statusZeile.status === 'Aktiv') {
@@ -470,8 +487,6 @@
         $el('btn-db-leeren').onclick = async function() {
             if(confirm("🧨 Wirklich ALLES löschen?")) {
                 this.innerText = "..."; this.disabled = true;
-                
-                // Lokalen Browser-Speicher (Cache) für dieses Spiel komplett leeren
                 Object.keys(localStorage).forEach(key => {
                     if(key.startsWith('bycs_')) {
                         localStorage.removeItem(key);
@@ -494,11 +509,18 @@
         function updateUIIdentity() {
             $el('s-stat-name').innerText = currentUser.name;
             let imgBox = $el('s-stat-img');
-            if(currentUser.img.startsWith('emo:')) { imgBox.innerText = currentUser.img.split(':')[1]; imgBox.style.background = '#fff'; imgBox.style.fontSize = '20px'; imgBox.style.textAlign='center'; imgBox.style.lineHeight='30px'; }
-            else { imgBox.style.backgroundImage = 'url('+currentUser.img+')'; imgBox.innerText = ''; }
+            if(currentUser.img.startsWith('emo:')) { 
+                imgBox.innerText = currentUser.img.split(':')[1]; 
+                imgBox.style.background = '#fff'; 
+                imgBox.style.fontSize = '20px'; 
+                imgBox.style.textAlign='center'; 
+                imgBox.style.lineHeight='30px'; 
+            } else { 
+                imgBox.style.backgroundImage = 'url('+currentUser.img+')'; 
+                imgBox.innerText = ''; 
+            }
         }
 
-        // Initialsierung
         let lsName = localStorage.getItem('bycs_quiz_name'), lsPic = localStorage.getItem('bycs_quiz_pic');
         if(lsName) currentUser.name = lsName;
         if(lsPic) currentUser.img = lsPic;
@@ -532,7 +554,6 @@
             this.innerText = "..."; this.disabled = true;
             const data = await fetchDB();
             
-            // GHOST-ID PROTECTOR (Falls Lehrer die DB leert oder Name geändert wurde)
             let myRow = null;
             if (localRid) myRow = data.find(d => d.rid === localRid && d.typ === "Schueler");
             if (!myRow) myRow = data.find(d => d.name === currentUser.name && d.typ === "Schueler");
@@ -543,7 +564,6 @@
                 localRid = null; localStorage.removeItem('bycs_quiz_rid');
             }
 
-            // Automatischer Moodle-Name Fetch, falls noch "Gast"
             if (!myRow && currentUser.name.startsWith("Gast-")) {
                 let mNameEl = document.querySelector('.usertext, .userbutton .usertext, .logininfo a:not([href*="logout"])');
                 if (mNameEl && !mNameEl.textContent.includes('{full')) {
@@ -614,7 +634,7 @@
             if (selected === null) {
                 selected = Array.from($els('.btn-antwort.selected')).map(b => b.innerText.split(':')[0]).join(',');
             }
-            if (!selected) selected = "-"; // Fallback für leere automatische Absendungen
+            if (!selected) selected = "-";
             
             let updateObj = { typ: 'Schueler', name: currentUser.name, bild: currentUser.img, rundenId: aktuellerStatusObj.rundenId, wert: selected, zeit: reaktion.toString() };
             if (localRid) updateObj.rid = localRid;
@@ -654,5 +674,4 @@
         initAllGames();
     }
 })();
-
 </script>
